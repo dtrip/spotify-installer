@@ -1,0 +1,119 @@
+#!/bin/bash
+# 
+# Description: Installs spotify client for Ubuntu 15.04
+# Author: Dtrip <d@nrx.co>
+# Date: 2015-10-19
+#
+#
+# Installation:
+# $ chmod +x spotify-install
+# $ sudo ./spotify-install
+#
+
+# Load the VERBOSE setting and other rcS variables
+. /lib/init/vars.sh
+
+# Define LSB log_* functions.
+# Depend on lsb-base (>= 3.2-14) to ensure that this file is present
+# and status_of_proc is working.
+. /lib/lsb/init-functions
+
+
+ #log file..
+LOG="/var/log/spotify-install"
+# UID=$(id -u) > /dev/null 2>&1
+
+# checks to ensure user has root permission
+log_daemon_msg "Checking permissions"
+if [[ $(id -u) -ne 0 ]]; then
+    log_failure_msg "Permission denied! Please run as root" 
+    exit 1
+else
+    log_end_msg 0
+fi
+
+export DEBIAN_FRONTEND=noninteractive > /dev/null
+
+if [[ $(uname -m) == 'x86_64' ]]; then
+    # 64 bit
+    GCRYPT="https://launchpad.net/ubuntu/+archive/primary/+files/libgcrypt11_1.5.3-2ubuntu4.2_amd64.deb"
+else
+    # 32 bit
+    GCRYPT="https://launchpad.net/ubuntu/+archive/primary/+files/libgcrypt11_1.5.3-2ubuntu4.2_i386.deb"
+fi
+
+#creates log file
+touch $LOG
+chmod 644 $LOG
+
+# Log file sanity check - if not able to write
+# outputs to /dev/null
+if [[ ! -w $LOG ]]; then
+    LOG=/dev/null
+fi
+
+function errorMsg() {
+    printf "\n\nError while installing spotify client!\n Please check log file for more details: ${LOG}\n"
+    exit 1
+}
+
+
+log_daemon_msg "Adding Spotify repository signing key"
+if sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys D2C19886 >> $LOG 2>&1;
+    then
+        log_end_msg 0
+    else
+        log_end_msg 1
+        errorMsg
+fi
+
+log_daemon_msg "Adding repository to apt"
+if sudo sh -c "echo deb http://repository.spotify.com stable non-free | tee /etc/apt/sources.list.d/spotify.list" >> $LOG 2>&1;
+    then
+        log_end_msg 0
+    else
+        log_end_msg 1
+        errorMsg
+fi
+
+log_daemon_msg "Updating apt repostiory index"
+if sudo apt-get -qq -y update >> $LOG 2>&1;
+    then
+        log_end_msg 0
+    else
+        log_end_msg 1
+        errorMsg
+fi
+
+log_daemon_msg "Downloading libgcrypt11 dependency "
+if wget --retry-connrefused $GCRYPT -O /tmp/libgcrypt11.deb >> $LOG 2>&1;
+    then
+        log_end_msg 0
+    else
+        log_end_msg 1
+        errorMsg
+fi
+
+
+log_daemon_msg "Installing libcrypt11"
+if sudo dpkg -i /tmp/libgcrypt11.deb >> $LOG 2>&1;
+    then
+        log_end_msg 0
+    else
+        log_end_msg 1
+        errorMsg
+fi
+
+
+log_daemon_msg "Installing Spotify"
+if sudo apt-get -qq -y --force-yes install spotify-client >> $LOG 2>&1; 
+    then
+        log_end_msg 0
+    else
+        log_end_msg 1
+        errorMsg
+fi
+
+printf "\n\nSuccess! Installation complete!\n"
+
+exit 0
