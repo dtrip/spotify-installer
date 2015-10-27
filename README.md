@@ -1,7 +1,7 @@
 # Ubuntu Spotify installer
 Install spotify and dependencies
 
-Tested on ubuntu 15.05 64bit
+Tested on ubuntu 15.04 64bit
 
 ## Installation
 execute the follow to install
